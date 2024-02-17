@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/xml"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	link "github.com/harchit/linkparser"
@@ -19,6 +21,16 @@ import (
 //5 find all pages (bfs)
 //6 print out xml
 
+type loc struct {
+	Value string `xml:"loc"`
+}
+type urlSet struct {
+	Urls  []loc  `xml:"url"`
+	Xmlns string `xml:"xmlns,attr"`
+}
+
+const xmlns = "http://www.sitemaps.org/schemas/sitemap/0.9"
+
 func main() {
 	urlFlag := flag.String("url", "https://gophercises.com", "url for building sitemap")
 	maxDepth := flag.Int("depth", 3, "max number of links deep to traverse")
@@ -26,8 +38,17 @@ func main() {
 
 	pages := bfs(*urlFlag, *maxDepth)
 
+	toXml := urlSet{
+		Xmlns: xmlns,
+	}
 	for _, page := range pages {
-		fmt.Println(page)
+		toXml.Urls = append(toXml.Urls, loc{page})
+	}
+	fmt.Print(xml.Header)
+	enc := xml.NewEncoder(os.Stdout)
+	enc.Indent("", "  ")
+	if err := enc.Encode(toXml); err != nil {
+		panic(err)
 	}
 
 }
